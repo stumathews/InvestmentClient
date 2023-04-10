@@ -1,8 +1,7 @@
 {
   "profiles": {
     "InvestmentApiClient": {
-      "commandName": "Project",
-      "commandLineArgs": "Investments Replace 3 Replaced --user system --password secret --url https://localhost:5001"
+      "commandName": "Project"
     }
   }
 }

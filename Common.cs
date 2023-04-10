@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CoreInvestment;
 using Newtonsoft.Json;
+using System.CommandLine.Parsing;
 
 namespace InvestmentApiClient
 {
@@ -55,8 +56,8 @@ namespace InvestmentApiClient
                 DeleteCommand<T>(entitySingularName, userOption, userPasswordOption, baseUrlOption),
                 GetCommand<T>(entitySingularName, userOption, userPasswordOption, baseUrlOption),
                 UpdateCommand<T>(entitySingularName, userOption, userPasswordOption, baseUrlOption),
+                CreateCommand<T>(userOption, userPasswordOption, baseUrlOption),
                 //ReplaceCommand(userOption, userPasswordOption, baseUrlOption),
-                //CreateCommand(userOption, userPasswordOption, baseUrlOption)
             };
 
         private static Operation CreateFieldReplacementOperation(string field, string value)
@@ -328,7 +329,7 @@ namespace InvestmentApiClient
                 result = (ICollection<T?>?)await client.InvestmentAllAsync();
             }
 
-            return result;
+            return result ?? throw new NotImplementedException($"List function not implemented for {typeof(T).Name}");
         }
 
         public static Command ListCommand<T>(string entityPluralName, Option<string> option, Option<string> userPasswordOption, Option<string> baseUrlOption)
@@ -420,6 +421,48 @@ namespace InvestmentApiClient
             return updateEntityCommand;
         }
 
+        private static Command CreateCommand<T>(Option<string> userOption, Option<string> userPasswordOption,
+            Option<string> baseUrlOption)
+        {
+            if (typeof(T) == typeof(InvestmentInfluenceFactor))
+            {
+                return CreateFactorCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(InvestmentRisk))
+            {
+                return CreateRiskCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(Region))
+            {
+                return CreateRegionCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(InvestmentGroup))
+            {
+                return CreateGroupCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(InvestmentTransaction))
+            {
+                return CreateTransactionCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(CustomEntity))
+            {
+                return CreateCustomEntityCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(CustomEntityType))
+            {
+                return CreateCustomEntityTypeCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(RecordedActivity))
+            {
+                return CreateActivityCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            if (typeof(T) == typeof(InvestmentNote))
+            {
+                return CreateNoteCommand(userOption, userPasswordOption, baseUrlOption);
+            }
+            throw new NotImplementedException();
+        }
+
         private static Command CreateFactorCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
         {
             var nameArg = new Argument<string>("Name", "Name of investment");
@@ -479,7 +522,7 @@ namespace InvestmentApiClient
                     Description = context.ParseResult.GetValueForOption(descriptionOpt),
                     IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
                     Points = context.ParseResult.GetValueForOption(pointsOption),
-                    Type = context.ParseResult.GetValueForArgument(riskTypeArg)
+                    Type = context.ParseResult.GetValueForArgument(riskTypeArg),
                 };
                 var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), risk);
                 WriteJsonObject(createdResult);
@@ -525,6 +568,7 @@ namespace InvestmentApiClient
             var descriptionOpt = new Option<string>("Description", "Description of group");
             var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the group should be highlisghted/flagged");
             var pointsOption = new Option<long>("Points", "group points/weighting");
+            var typeOption = new Option<string>("Type", "Type of group");
 
             var createRegionCommand = new Command("Create", "Create an group")
             {
@@ -542,6 +586,7 @@ namespace InvestmentApiClient
                     Description = context.ParseResult.GetValueForOption(descriptionOpt),
                     IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
                     Points = context.ParseResult.GetValueForOption(pointsOption),
+                    Type = context.ParseResult.GetValueForOption(typeOption),
                 };
                 var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), group);
                 WriteJsonObject(createdResult);
@@ -550,5 +595,220 @@ namespace InvestmentApiClient
             return createRegionCommand;
         }
 
+        private static Command CreateTransactionCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
+        {
+            var nameArg = new Argument<string>("Name", "Name of transaction");
+            var descriptionOpt = new Option<string>("Description", "Description of transaction");
+            var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the transaction should be highlisghted/flagged");
+            var pointsOption = new Option<long>("Points", "transaction points/weighting");
+            var commissionArg = new Argument<double>("Commission","Amount of commission");
+            var currencyArg = new Argument<string>("Currency", "currency");
+            var numUnitsArgs = new Argument<int>("Units", "Number of units");
+            var pricePerUnitArg = new Argument<float>("PricePerUnit", "Price per unit");
+            var transactionTypeArg = new Argument<string>("Transaction type", "Transaction type");
+            var transactionDateOption = new Option<DateTimeOffset>("TransactionDate", "Date of transaction");
+            var investmentIdArg = new Argument<int>("Investment Id", "The investment Id that this transaction is for");
+            var createRegionCommand = new Command("Create", "Create an transaction")
+            {
+                nameArg,
+                descriptionOpt,
+                isFlaggedOption,
+                pointsOption,
+                commissionArg,
+                investmentIdArg,
+                currencyArg,
+                numUnitsArgs,
+                pricePerUnitArg,
+                transactionTypeArg,
+                transactionDateOption,
+            };
+
+            createRegionCommand.SetHandler(async context =>
+            {
+
+                var txn = new InvestmentTransaction()
+                {
+                    Name = context.ParseResult.GetValueForArgument(nameArg),
+                    Description = context.ParseResult.GetValueForOption(descriptionOpt),
+                    IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
+                    Points = context.ParseResult.GetValueForOption(pointsOption),
+                    Commission = context.ParseResult.GetValueForArgument(commissionArg),
+                    Currency = context.ParseResult.GetValueForArgument(currencyArg),
+                    NumUnits = context.ParseResult.GetValueForArgument(numUnitsArgs),
+                    PricePerUnit = context.ParseResult.GetValueForArgument(pricePerUnitArg),
+                    TransactionType = context.ParseResult.GetValueForArgument(transactionTypeArg),
+                    TransactionDate = context.ParseResult.GetValueForOption(transactionDateOption),
+                    InvestmentId = context.ParseResult.GetValueForArgument(investmentIdArg)
+                    
+                };
+                var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), txn);
+                WriteJsonObject(createdResult);
+            });
+
+            return createRegionCommand;
+        }
+
+        private static Command CreateCustomEntityCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
+        {
+            var nameArg = new Argument<string>("Name", "Name of custom entity");
+            var descriptionOpt = new Option<string>("Description", "Description of custom entity");
+            var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the custom entity should be highlisghted/flagged");
+            var pointsOption = new Option<long>("Points", "custom entity points/weighting");
+            var customEntityTypeArg = new Argument<int?>("CustomEntityTypeId", ()=> null, "Id of Custom Entity Type");
+            var owningEntityIdArg = new Argument<int>("OwningEntityId", "Id of the owning entity");
+            var owningEntityTypeArg = new Argument<EntityType>("OwningEntityType", "Owning Entity Type");
+            var owningCustomEntityOption = new Option<int?>("OwningCustomEntityId", ()=> null,
+                "owning custom entity if owning entityType = custom");
+            var createRegionCommand = new Command("Create", "Create an custom entity")
+            {
+                nameArg,
+                descriptionOpt,
+                isFlaggedOption,
+                pointsOption,
+                customEntityTypeArg,
+                owningEntityIdArg,
+                owningEntityTypeArg,
+                owningCustomEntityOption
+            };
+
+            createRegionCommand.SetHandler(async context =>
+            {
+                var username = context.ParseResult.GetValueForOption(userOption);
+                var password = context.ParseResult.GetValueForOption(userPasswordOption);
+                var url = context.ParseResult.GetValueForOption(baseUrlOption);
+                var customEntityTypeId = context.ParseResult.GetValueForArgument(customEntityTypeArg);
+                var owningEntityType = context.ParseResult.GetValueForArgument(owningEntityTypeArg);
+                var owningCustomEntityId = context.ParseResult.GetValueForOption(owningCustomEntityOption);
+
+                var entity = new CustomEntity
+                {
+                    Name = context.ParseResult.GetValueForArgument(nameArg),
+                    Description = context.ParseResult.GetValueForOption(descriptionOpt),
+                    IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
+                    Points = context.ParseResult.GetValueForOption(pointsOption),
+                    OwningEntityId = context.ParseResult.GetValueForArgument(owningEntityIdArg),
+
+                    // Investment Id, Risk id or CustomEntityType Id etc.
+                    OwningEntityType = owningEntityType,
+
+                    // Is this Custom Entity for a user defined type eg. Products, Services, Business Segment, Investment Review? OK, get it...
+                    CustomEntityType = customEntityTypeId.HasValue 
+                        ? await Get<CustomEntityType>(username, password, url, customEntityTypeId.Value)
+                        : null,
+                    // Owner is a custom entity? OK, get it...
+                    OwningCustomEntity = owningCustomEntityId.HasValue && owningEntityType == EntityType.Custom
+                        ? await Get<CustomEntity>(username, password, url, owningCustomEntityId.Value)
+                        : null,
+                };
+                var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption),
+                    context.ParseResult.GetValueForOption(baseUrlOption), entity);
+                WriteJsonObject(createdResult);
+            });
+
+            return createRegionCommand;
+        }
+
+        private static Command CreateCustomEntityTypeCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
+        {
+            var nameArg = new Argument<string>("Name", "Name of custom entity type");
+            var descriptionOpt = new Option<string>("Description", "Description of custom entity type");
+            var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the custom entity type should be highlisghted/flagged");
+            var pointsOption = new Option<long>("Points", "custom entity type points/weighting");
+            var dataTypeArg = new Argument<EntityType>("DataType", "Data type of the custom entity type");
+            
+            var createRegionCommand = new Command("Create", "Create an custom entity type")
+            {
+                nameArg,
+                descriptionOpt,
+                isFlaggedOption,
+                pointsOption,
+                dataTypeArg
+            };
+
+            createRegionCommand.SetHandler(async context =>
+            {
+                var entity = new CustomEntityType()
+                {
+                    Name = context.ParseResult.GetValueForArgument(nameArg),
+                    Description = context.ParseResult.GetValueForOption(descriptionOpt),
+                    IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
+                    Points = context.ParseResult.GetValueForOption(pointsOption),
+                    DataType = context.ParseResult.GetValueForArgument(dataTypeArg),
+                };
+                var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), 
+                    context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), entity );
+                WriteJsonObject(createdResult);
+            });
+
+            return createRegionCommand;
+        }
+
+        private static Command CreateNoteCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
+        {
+            var nameArg = new Argument<string>("Name", "Name of note");
+            var descriptionOpt = new Option<string>("Description", "Description of note");
+            var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the note should be highlisghted/flagged");
+            var pointsOption = new Option<long>("Points", "note points/weighting");
+            var createRegionCommand = new Command("Create", "Create an note")
+            {
+                nameArg,
+                descriptionOpt,
+                isFlaggedOption,
+                pointsOption,
+            };
+
+            createRegionCommand.SetHandler(async context =>
+            {
+                var note = new InvestmentNote()
+                {
+                    Name = context.ParseResult.GetValueForArgument(nameArg),
+                    Description = context.ParseResult.GetValueForOption(descriptionOpt),
+                    IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
+                    Points = context.ParseResult.GetValueForOption(pointsOption),
+
+                };
+                var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), note);
+                WriteJsonObject(createdResult);
+            });
+
+            return createRegionCommand;
+        }
+
+        private static Command CreateActivityCommand(Option<string> userOption, Option<string> userPasswordOption, Option<string> baseUrlOption)
+        {
+            var nameArg = new Argument<string>("Name", "Name of activity");
+            var descriptionOpt = new Option<string>("Description", "Description of activity");
+            var isFlaggedOption = new Option<bool>("IsFlagged", "Set if the activity should be highlisghted/flagged");
+            var pointsOption = new Option<long>("Points", "activity points/weighting");
+            var detailsOption = new Option<string>("Details", "details");
+            var tagOption = new Option<string>("Tag", "Some tag");
+
+            var createRegionCommand = new Command("Create", "Create an activity")
+            {
+                nameArg,
+                descriptionOpt,
+                isFlaggedOption,
+                pointsOption,
+                detailsOption,
+                tagOption
+            };
+
+            createRegionCommand.SetHandler(async context =>
+            {
+                var group = new RecordedActivity()
+                {
+                    Name = context.ParseResult.GetValueForArgument(nameArg),
+                    Description = context.ParseResult.GetValueForOption(descriptionOpt),
+                    IsFlagged = context.ParseResult.GetValueForOption(isFlaggedOption),
+                    Points = context.ParseResult.GetValueForOption(pointsOption),
+                    Details = context.ParseResult.GetValueForOption(detailsOption),
+                    Tag = context.ParseResult.GetValueForOption(tagOption)
+                };
+                var createdResult = await Create(context.ParseResult.GetValueForOption(userOption), context.ParseResult.GetValueForOption(userPasswordOption), context.ParseResult.GetValueForOption(baseUrlOption), group);
+                WriteJsonObject(createdResult);
+            });
+
+            return createRegionCommand;
+        }
     }
 }

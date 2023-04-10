@@ -42,6 +42,8 @@ rootCommand.AddCommand(CreateEntityCommand<InvestmentRisk>("Risks", "risk", "ris
 rootCommand.AddCommand(CreateEntityCommand<InvestmentGroup>("Groups", "group", "groups", userNameOption, userPasswordOption, baseUrlOption));
 rootCommand.AddCommand(CreateEntityCommand<Region>("Regions", "region", "regions", userNameOption, userPasswordOption, baseUrlOption));
 rootCommand.AddCommand(CreateEntityCommand<CustomEntity>("CustomEntities", "custom entity", "custom entities", userNameOption, userPasswordOption, baseUrlOption));
+rootCommand.AddCommand(CreateEntityCommand<InvestmentTransaction>("Transactions", "transaction", "transactions", userNameOption, userPasswordOption, baseUrlOption));
 rootCommand.AddCommand(CreateEntityCommand<CustomEntityType>("CustomEntityTypes", "custom entity type", "custom entity types", userNameOption, userPasswordOption, baseUrlOption));
-
+// Recorded Activity
+// Investment Note
 return await rootCommand.InvokeAsync(args);
